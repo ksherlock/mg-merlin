@@ -22,8 +22,39 @@
 int
 ntabstop(int col, int tabw)
 {
+
+	#if 1
+	if (col < 16) return 16;
+	if (col < 20) return 20;
+	if (col < 40) return 40;
+	return col + 1;
+	#else
 	return (((col + tabw) / tabw) * tabw);
+	#endif
 }
+
+
+int ntabstopv(int col, struct buffer *curbp)
+{
+	/* fixed width */
+	if (curbp->b_tabw) return ntabstop(col, curbp->b_tabw);
+
+	/* variable width */
+	col += 1;
+	int ix = col / sizeof(unsigned) * 8;
+	int pos = col % sizeof(unsigned) * 8;
+	for( ; ix < 4; ++ix, pos = 0) {
+		unsigned tabv = curbp->b_tabv[ix];
+
+		tabv >>= pos;
+		for (; tabv; tabv >>= 1, ++pos) {
+			if (tabv & 1)
+				return ix * sizeof(unsigned) * 8 + pos;
+		}
+	}
+	return col;
+}
+
 
 /*
  * Display a bunch of useful information about the current location of dot.
