@@ -50,6 +50,7 @@ AC_ARG_ENABLE(compile,  AS_HELP_STRING([--disable-compile],  [Disable C compile 
 AC_ARG_ENABLE(cscope,   AS_HELP_STRING([--disable-cscope],   [Disable Cscope support]))
 AC_ARG_ENABLE(ctags,    AS_HELP_STRING([--disable-ctags],    [Disable ctags(1) support, required by Cscope]))
 AC_ARG_ENABLE(dired,    AS_HELP_STRING([--disable-dired],    [Disable directory editor]))
+AC_ARG_ENABLE(merlin,   AS_HELP_STRING([--disable-merlin],   [Disable merlin support]))
 AC_ARG_ENABLE(regexp,   AS_HELP_STRING([--disable-regexp],   [Disable full regexp search]))
 AC_ARG_ENABLE(togglenl, AS_HELP_STRING([--disable-togglenl], [Disable toggle-newline-prompt extension]))
 AC_ARG_ENABLE(all,      AS_HELP_STRING([--disable-all],      [Disable all optional features]))
@@ -112,6 +113,7 @@ AS_IF([test "x$enable_all" = "xno"],
 	enable_cscope="no"
 	enable_ctags="no"
 	enable_dired="no"
+	enable_merlin="no"
 	enable_regexp="no"
 	enable_togglenl="no"
 	startup="no")
@@ -143,6 +145,9 @@ AS_IF([test "x$enable_ctags" != "xno"], enable_ctags="yes"
 AS_IF([test "x$enable_dired" != "xno"], enable_dired="yes"
 	AC_DEFINE(ENABLE_DIRED, 1, [Enable dired, the directory editor]))
 
+AS_IF([test "x$enable_merlin" != "xno"], enable_merlin="yes"
+	AC_DEFINE(ENABLE_MERLIN, 1, [Enable merlin assembler mode]))
+
 AS_IF([test "x$enable_regexp" != "xno"], enable_regexp="yes"
 	AC_DEFINE(REGEX, 1, [Enable regexp search support]))
 
@@ -165,6 +170,7 @@ AM_CONDITIONAL(COMPILE,  [test "x$enable_compile"  = "xyes"])
 AM_CONDITIONAL(CSCOPE,   [test "x$enable_cscope"   = "xyes"])
 AM_CONDITIONAL(CTAGS,    [test "x$enable_ctags"    = "xyes"])
 AM_CONDITIONAL(DIRED,    [test "x$enable_dired"    = "xyes"])
+AM_CONDITIONAL(MERLIN,   [test "x$enable_merlin"   = "xyes"])
 AM_CONDITIONAL(TINY,     [test "x$enable_tiny"     = "xyes"])
 AM_CONDITIONAL(MGLOG,    [test "x$mglog"          != "xno"])
 AM_CONDITIONAL(DOCS,     [test "x$with_docs"      != "xno"])
@@ -207,6 +213,7 @@ cat <<EOF
   cscope.........: $enable_cscope
   ctags..........: $enable_ctags
   dired..........: $enable_dired
+  merlin.........: $enable_merlin
   regexp.........: $enable_regexp
 
 ------------- Compiler version --------------

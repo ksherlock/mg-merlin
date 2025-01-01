@@ -634,6 +634,12 @@ bnew(const char *bname)
 	bp->b_nlseq = "\n";		/* use unix default */
 	bp->b_nlchr = bp->b_nlseq;
 	bp->b_tabw = defb_tabw;
+
+	bp->b_tabv[0] = 10;
+	bp->b_tabv[1] = 15;
+	bp->b_tabv[2] = 28;
+	bp->b_tabv[3] = 0;
+
 	if ((bp->b_bname = strdup(bname)) == NULL) {
 		dobeep();
 		ewprintf("Can't get %d bytes", strlen(bname) + 1);

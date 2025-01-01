@@ -400,6 +400,23 @@ vteeol(void)
 		vp->v_text[vtcol++] = ' ';
 }
 
+
+static void render_line(struct line *lp, struct mgwin *wp)
+{
+	int j;
+
+#ifdef ENABLE_MERLIN
+	if (wp->w_bufp->b_flag & BFMERLIN) {
+		extern void merlin_render_line(struct line *lp, struct mgwin *wp);
+		merlin_render_line(lp, wp);
+		return;
+	}
+#endif
+
+	for (j = 0; j < llength(lp); ++j)
+		vtputc(lgetc(lp, j), wp);
+}
+
 /*
  * Make sure that the display is
  * right. This is a three part process. First,
@@ -491,8 +508,12 @@ update(int modelinecolor)
 			vscreen[i]->v_color = CTEXT;
 			vscreen[i]->v_flag |= (VFCHG | VFHBAD);
 			vtmove(i, 0);
+			#if 0
 			for (j = 0; j < llength(lp); ++j)
 				vtputc(lgetc(lp, j), wp);
+			#else
+			render_line(lp, wp);
+			#endif
 			vteeol();
 		} else if ((wp->w_rflag & (WFEDIT | WFFULL)) != 0) {
 			hflag = TRUE;
@@ -501,8 +522,12 @@ update(int modelinecolor)
 				vscreen[i]->v_flag |= (VFCHG | VFHBAD);
 				vtmove(i, 0);
 				if (lp != wp->w_bufp->b_headp) {
+					#if 0
 					for (j = 0; j < llength(lp); ++j)
 						vtputc(lgetc(lp, j), wp);
+					#else
+					render_line(lp, wp);
+					#endif
 					lp = lforw(lp);
 				}
 				vteeol();
@@ -522,6 +547,7 @@ update(int modelinecolor)
 	}
 	curcol = 0;
 	i = 0;
+	#if 0
 	while (i < curwp->w_doto) {
 		c = lgetc(lp, i++);
 		if (c == '\t') {
@@ -537,6 +563,9 @@ update(int modelinecolor)
 			curcol += strlen(bf);
 		}
 	}
+	#else
+	curcol = getcolpos(curwp);
+	#endif
 	if (curcol >= ncol - 1) {	/* extended line. */
 		/* flag we are extended and changed */
 		vscreen[currow]->v_flag |= VFEXT | VFCHG;
@@ -559,8 +588,12 @@ update(int modelinecolor)
 				if ((wp != curwp) || (lp != wp->w_dotp) ||
 				    (curcol < ncol - 1)) {
 					vtmove(i, 0);
+				    #if 0
 					for (j = 0; j < llength(lp); ++j)
 						vtputc(lgetc(lp, j), wp);
+					#else
+					render_line(lp, wp);
+					#endif
 					vteeol();
 					/* this line no longer is extended */
 					vscreen[i]->v_flag &= ~VFEXT;

@@ -165,5 +165,14 @@ set_default_mode(int f, int n)
 		else
 			defb_flag |= BFNOTAB;
 	}
+#ifdef ENABLE_MERLIN
+	if (strcmp(modebuf, "merlin") == 0) {
+		if (n <= 0)
+			defb_flag &= ~BFMERLIN;
+		else
+			defb_flag |= BFMERLIN;
+	}
+#endif
+
 	return (TRUE);
 }

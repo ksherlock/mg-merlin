@@ -22,15 +22,7 @@
 int
 ntabstop(int col, int tabw)
 {
-
-	#if 1
-	if (col < 16) return 16;
-	if (col < 20) return 20;
-	if (col < 40) return 40;
-	return col + 1;
-	#else
 	return (((col + tabw) / tabw) * tabw);
-	#endif
 }
 
 
@@ -138,6 +130,12 @@ getcolpos(struct mgwin *wp)
 	/* determine column */
 	col = 0;
 
+#ifdef ENABLE_MERLIN
+	if (wp->w_bufp->b_flag & BFMERLIN) {
+		extern int merlin_getcolpos(struct mgwin *wp);
+		return merlin_getcolpos(wp);
+	}
+#endif
 	for (i = 0; i < wp->w_doto; ++i) {
 		c = lgetc(wp->w_dotp, i);
 		if (c == '\t') {

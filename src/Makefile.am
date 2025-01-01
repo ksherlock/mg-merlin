@@ -46,6 +46,9 @@ endif
 if DIRED
 mg_SOURCES     += dired.c
 endif
+if MERLIN
+mg_SOURCES     += merlin.c
+endif
 if REGEX
 mg_SOURCES     += re_search.c
 endif

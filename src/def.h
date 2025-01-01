@@ -370,8 +370,8 @@ struct buffer {
 	int		 b_doto;	/* Offset of "." in above line	 */
 	int		 b_marko;	/* ditto for the "mark"		 */
 	short		 b_nmodes;	/* number of non-fundamental modes */
+	short		 b_flag;	/* Flags			 */
 	char		 b_nwnd;	/* Count of windows on buffer	 */
-	char		 b_flag;	/* Flags			 */
 	char		 b_fname[NFILEN]; /* File name			 */
 	char		 b_cwd[NFILEN]; /* working directory		 */
 	char		*b_nlseq;	/* Newline sequence of chars	 */
@@ -384,7 +384,7 @@ struct buffer {
 	int		 b_markline;	/* Line number of mark */
 	int		 b_lines;	/* Number of lines in file	*/
 
-	unsigned	 b_tabv[4];
+	int		 b_tabv[4];
 };
 #define b_bufp	b_list.l_p.x_bp
 #define b_bname b_list.l_name
@@ -401,6 +401,7 @@ struct buffer {
 #define BFDIRTY     0x20		/* Buffer was modified elsewhere */
 #define BFIGNDIRTY  0x40		/* Ignore modifications 	 */
 #define BFDIREDDEL  0x80		/* Dired has a deleted 'D' file	 */
+#define BFMERLIN    0x100		/* Merlin display mode           */
 /*
  * This structure holds information about recent actions for the Undo command.
  */

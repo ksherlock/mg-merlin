@@ -273,6 +273,13 @@ getgoal(struct line *dlp)
 	int c, i, col = 0;
 	char tmp[5];
 
+#ifdef ENABLE_MERLIN
+	if (curbp->b_flag & BFMERLIN) {
+		extern int merlin_getgoal(struct line *dlp);
+		return merlin_getgoal(dlp);
+	}
+#endif
+
 	for (i = 0; i < llength(dlp); i++) {
 		c = lgetc(dlp, i);
 		if (c == '\t') {
