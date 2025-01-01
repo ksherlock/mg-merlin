@@ -23,6 +23,7 @@ int merlin_lf(int f, int n);
 int merlin_star(int f, int n);
 int merlin_tab(int f, int n);
 int merlin_toggle(int f, int n);
+int merlin_comment_line(int f, int n);
 int merlin_set_tab_stops(int f, int n);
 int merlin_set_toggle_uppercase(int f, int n);
 
@@ -31,6 +32,11 @@ int merlin_getgoal(struct line *dlp);
 void merlin_render_line(struct line *lp, struct mgwin *wp);
 
 static int in_whitespace(struct line *lp, int len);
+
+
+static PF merlin_pf_null[] = {
+	NULL
+};
 
 static PF merlin_pf_insert[] = {
 	selfinsert
@@ -44,6 +50,10 @@ static PF merlin_pf_star[] = {
 	merlin_star
 };
 
+static PF merlin_cx_semi[] = {
+	merlin_comment_line
+};
+
 static PF merlin_pf_cc[] = {
 	merlin_tab,		/* ^I */
 	enewline,		/* ^J */
@@ -52,12 +62,24 @@ static PF merlin_pf_cc[] = {
 	merlin_lf		/* ^M */
 };
 
-static struct KEYMAPE (7) merlinmap = {
-	7,
-	7,
+static struct KEYMAPE (1) merlin_cx_map = {
+	1,
+	1,
+	rescan,
+	{
+		/* emacs uses control-x, control-;
+		 * however, control-; is not tty-happy */
+		{ ';', ';', merlin_cx_semi , NULL }
+	}
+};
+
+static struct KEYMAPE (8) merlin_map = {
+	8,
+	8,
 	rescan,
 	{
 		{ CCHR('I'), CCHR('M'), merlin_pf_cc, NULL },
+		{ CCHR('X'), CCHR('X'), merlin_pf_null, (KEYMAP *)&merlin_cx_map },
 		{ ' ', ' ', merlin_pf_tab, NULL },
 		{ '*', '*', merlin_pf_star, NULL },
 		{ ';', ';', merlin_pf_star, NULL },
@@ -78,10 +100,10 @@ merlin_init(void)
 	// funmap_add(cc_tab, "c-tab-or-indent", 0);
 	// funmap_add(cc_indent, "c-indent", 0);
 	// funmap_add(cc_lfindent, "c-indent-and-newline", 0);
-	// funmap_add(merlin_comment_region, "comment-region", 0);
+	funmap_add(merlin_comment_line, "comment-line", 0);
 	funmap_add(merlin_set_tab_stops, "set-tab-stops", 0);
 	funmap_add(merlin_set_toggle_uppercase, "merlin-uppercase", 0);
-	maps_add((KEYMAP *)&merlinmap, "merlin");
+	maps_add((KEYMAP *)&merlin_map, "merlin");
 }
 
 /*
@@ -180,27 +202,125 @@ merlin_star(int f, int n)
 	return selfinsert(f, n);
 }
 
+/* see region.c : getregion() */
 
-#if 0
-int
-merlin_comment_region(int f, int n)
-{
-	int i;
-	int comment = TRUE;
+static int getrange(struct line **first, struct line **last) {
 
-	for (i = 0; i < curwp->w_doto; ++i) {
-		int c = lgetc(curwp->w_dotp, i) & 0x7f;
-		if (c > ' ') {
-			comment = FALSE;
-			break;
+	struct line *flp;
+	struct line *blp;
+	struct line *dotp;
+	struct line *markp;
+	struct line *headp;
+
+	if (curwp->w_markp == NULL) return FALSE;
+
+	markp = curwp->w_markp; 
+	dotp = curwp->w_dotp;
+	headp = curbp->b_headp;
+
+	if (markp == dotp) {
+		*first = dotp;
+		*last = dotp;
+		return TRUE;
+	}
+
+	flp = blp = dotp;
+	for(;;) {
+		if (flp == headp && blp == headp) return FALSE;
+
+		if (flp != headp) {
+			flp = lforw(flp);
+			if (flp == markp) {
+				*first = dotp;
+				*last = markp;
+				return TRUE;
+			}
 		}
+		if (blp != headp) {
+			blp = lback(blp);
+			if (blp == markp) {
+				*first = markp;
+				*last = dotp;
+				return TRUE;
+			}
+		}
+
+
 	}
-	if (comment) {
-		delleadwhite(f, n);
-	}
-	return selfinsert(f, n);
+	return FALSE;
 }
-#endif
+
+/*
+control-x control-;
+comment or uncomment a line/region.
+*/
+int
+merlin_comment_line(int f, int n)
+{
+	struct line *first = NULL;
+	struct line *last = NULL;
+	struct line *iter = NULL;
+	struct line *dotp = curwp->w_dotp;
+	int doto = curwp->w_doto;
+	int dotline = curwp->w_dotline;
+
+	if (curbp->b_flag & BFREADONLY) {
+		dobeep();
+		ewprintf("Buffer is read-only");
+		return (FALSE);
+	}
+
+	if (!getrange(&first, &last) || first == last) {
+		/* simple case - just do the current line */
+		
+		int ok;
+		int l = llength(dotp);
+		int c = l ? lgetc(dotp, 0) & 0x7f : 0;
+
+		gotobol(FFRAND, 1); 
+		if (c == '*') {
+			ok = ldelete(1, KNONE);
+			if (ok) --doto;
+		} else {
+			ok = linsert(1, '*');
+			if (ok) ++doto;
+		}
+
+		/* move back to the starting point */
+		forwchar(FFRAND, doto);
+		return ok;
+	}
+
+	/* adding or deleting? just check the first line ... */
+	int comment = llength(first) ? lgetc(first, 0) & 0x7f : 0;
+
+	last = lforw(last);
+	if (dotp != first) {
+		curwp->w_dotp = curwp->w_markp;
+		curwp->w_doto = curwp->w_marko;
+		curwp->w_dotline = curwp->w_markline;
+	}
+
+	for (iter = first ; iter != last; iter = lforw(iter)) {
+		gotobol(FFRAND, 1);
+
+		int c = llength(iter) ? lgetc(iter, 0) & 0x7f : 0;
+
+		gotobol(FFRAND, 1); 
+		if (c == '*' && comment == '*') {
+			ldelete(1, KNONE);
+		}
+		if (c != '*' && comment != '*') {
+			linsert(1, '*');
+		}
+		forwline(FFRAND, 1);
+	}
+	/* restore original dot? */
+	curwp->w_dotp = dotp;
+	curwp->w_dotline = dotline;
+	gotobol(FFRAND, 1);
+	return TRUE;
+}
 
 int
 merlin_set_tab_stops(int f, int n)
