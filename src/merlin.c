@@ -25,7 +25,7 @@ int merlin_tab(int f, int n);
 int merlin_toggle(int f, int n);
 int merlin_comment_line(int f, int n);
 int merlin_set_tab_stops(int f, int n);
-int merlin_set_toggle_uppercase(int f, int n);
+int merlin_toggle_uppercase(int f, int n);
 
 int merlin_getcolpos(struct mgwin *wp);
 int merlin_getgoal(struct line *dlp);
@@ -95,14 +95,9 @@ void
 merlin_init(void)
 {
 	funmap_add(merlin_toggle, "merlin", 0);
-	// funmap_add(cc_char, "c-handle-special-char", 0);
-	// funmap_add(cc_brace, "c-handle-special-brace", 0);
-	// funmap_add(cc_tab, "c-tab-or-indent", 0);
-	// funmap_add(cc_indent, "c-indent", 0);
-	// funmap_add(cc_lfindent, "c-indent-and-newline", 0);
 	funmap_add(merlin_comment_line, "comment-line", 0);
 	funmap_add(merlin_set_tab_stops, "set-tab-stops", 0);
-	funmap_add(merlin_set_toggle_uppercase, "merlin-uppercase", 0);
+	funmap_add(merlin_toggle_uppercase, "merlin-uppercase", 0);
 	maps_add((KEYMAP *)&merlin_map, "merlin");
 }
 
@@ -204,6 +199,8 @@ merlin_star(int f, int n)
 
 /* see region.c : getregion() */
 
+/* returns c++ style range, ie, last is 1 beyond actual end. */
+/* also moves dot to the start of the range */
 static int getrange(struct line **first, struct line **last) {
 
 	struct line *flp;
@@ -220,7 +217,7 @@ static int getrange(struct line **first, struct line **last) {
 
 	if (markp == dotp) {
 		*first = dotp;
-		*last = dotp;
+		*last = lforw(dotp);
 		return TRUE;
 	}
 
@@ -232,7 +229,7 @@ static int getrange(struct line **first, struct line **last) {
 			flp = lforw(flp);
 			if (flp == markp) {
 				*first = dotp;
-				*last = markp;
+				*last = lforw(markp);
 				return TRUE;
 			}
 		}
@@ -240,7 +237,12 @@ static int getrange(struct line **first, struct line **last) {
 			blp = lback(blp);
 			if (blp == markp) {
 				*first = markp;
-				*last = dotp;
+				*last = lforw(dotp);
+
+				curwp->w_dotp = markp;
+				curwp->w_doto = 0; //curwp->w_marko;
+				curwp->w_dotline = curwp->w_markline;
+				// curwp->w_rflag |= WFMOVE;
 				return TRUE;
 			}
 		}
@@ -270,7 +272,12 @@ merlin_comment_line(int f, int n)
 		return (FALSE);
 	}
 
-	if (!getrange(&first, &last) || first == last) {
+	if (f & FFARG) {
+		if (n == 0) return TRUE;
+	}
+
+
+	if (!getrange(&first, &last)) {
 		/* simple case - just do the current line */
 		
 		int ok;
@@ -293,13 +300,6 @@ merlin_comment_line(int f, int n)
 
 	/* adding or deleting? just check the first line ... */
 	int comment = llength(first) ? lgetc(first, 0) & 0x7f : 0;
-
-	last = lforw(last);
-	if (dotp != first) {
-		curwp->w_dotp = curwp->w_markp;
-		curwp->w_doto = curwp->w_marko;
-		curwp->w_dotline = curwp->w_markline;
-	}
 
 	for (iter = first ; iter != last; iter = lforw(iter)) {
 		gotobol(FFRAND, 1);
@@ -369,9 +369,13 @@ merlin_set_tab_stops(int f, int n)
 	return (TRUE);
 }
 
-int merlin_set_toggle_uppercase(int f, int n) {
+int merlin_toggle_uppercase(int f, int n) {
 
-	merlin_uppercase = !merlin_uppercase;
+	if (f & FFARG) {
+		merlin_uppercase = n > 0;
+	} else {
+		merlin_uppercase = !merlin_uppercase;
+	}
 	curwp->w_rflag |= WFFRAME;
 	return (TRUE);
 }
