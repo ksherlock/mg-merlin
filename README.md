@@ -1,3 +1,18 @@
+This is an experimental fork with features influenced by the merlin 16+ assembler/editor.
+
+When in merlin mode, input and display rendering is modified to act like merlin. More
+specifically, there are separate tab stops for the opcode, operand, and label fields.
+Whitespace between fields is collapsed.
+
+
+* m-x merlin -- enable the merlin mode
+* m-x set-tab-stops -- set the tab stops. provide a comma-separated list of 3 numbers.
+* c-x ; -- comment/uncomment a line (or region).
+* m-x merlin-uppercase -- toggle uppercase mode (this only affects the display)
+
+Work is done on the merlin branch, which may be rebased and force-pushed to keep up to
+date.
+
 Micro (GNU) Emacs
 =================
 [![License Badge][]][License] [![GitHub Status][]][GitHub] [![Coverity Status][]][Coverity Scan]
