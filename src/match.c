@@ -182,7 +182,11 @@ displaymatch(struct line *clp, int cbo)
 				} else
 					buf[bufo++] = c;
 			} else {
+#if 1
+				col = ntabstopv(bufo, curbp);
+#else
 				col = ntabstop(bufo, curbp->b_tabw);
+#endif
 				while (bufo < col && bufo < buflen)
 					buf[bufo++] = ' ';
 			}

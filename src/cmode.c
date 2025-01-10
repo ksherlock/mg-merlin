@@ -247,7 +247,11 @@ getindent(const struct line *lp, int *curi)
 		if (!isspace(c = lgetc(lp, lo)))
 			break;
 		if (c == '\t')
+#if 1
+			nicol = ntabstopv(nicol, curbp);
+#else
 			nicol = ntabstop(nicol, curbp->b_tabw);
+#endif
 		else
 			nicol++;
 	}
@@ -412,7 +416,11 @@ findcolpos(const struct buffer *bp, const struct line *lp, int lo)
 	for (i = 0; i < lo; ++i) {
 		c = lgetc(lp, i);
 		if (c == '\t') {
+#if 1
+			col = ntabstopv(col, curbp);
+#else
 			col = ntabstop(col, curbp->b_tabw);
+#endif
 		} else if (ISCTRL(c) != FALSE)
 			col += 2;
 		else if (isprint(c)) {

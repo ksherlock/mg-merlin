@@ -283,7 +283,11 @@ getgoal(struct line *dlp)
 	for (i = 0; i < llength(dlp); i++) {
 		c = lgetc(dlp, i);
 		if (c == '\t') {
+#if 1
+			col = ntabstopv(col, curbp);
+#else
 			col = ntabstop(col, curbp->b_tabw);
+#endif
 		} else if (ISCTRL(c) != FALSE) {
 			col += 2;
 		} else if (isprint(c))

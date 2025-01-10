@@ -218,6 +218,7 @@ static struct funmap functnames[] = {
 	{selfinsert, "self-insert-command", 1, NULL},		/* startup only */
 	{sentencespace, "sentence-end-double-space", 0, NULL},
 	{settabw, "set-tab-width", 1, NULL},
+	{set_tab_stops, "set-tab-stops", 1, NULL},
 #ifdef REGEX
 	{setcasefold, "set-case-fold-search", 0, NULL},
 #endif /* REGEX */

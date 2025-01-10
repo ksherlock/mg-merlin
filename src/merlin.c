@@ -96,7 +96,7 @@ merlin_init(void)
 {
 	funmap_add(merlin_toggle, "merlin", 0);
 	funmap_add(merlin_comment_line, "comment-line", 0);
-	funmap_add(merlin_set_tab_stops, "set-tab-stops", 0);
+	// funmap_add(merlin_set_tab_stops, "set-tab-stops", 0);
 	funmap_add(merlin_toggle_uppercase, "merlin-uppercase", 0);
 	maps_add((KEYMAP *)&merlin_map, "merlin");
 }
@@ -116,6 +116,20 @@ merlin_toggle(int f, int n)
 			curbp->b_flag |= BFMERLIN;
 	} else
 		curbp->b_flag ^= BFMERLIN;
+
+
+	if ((curbp->b_flag & BFMERLIN) && curbp->b_tabw) {
+
+		/* merlin 16+ 10, 16, 27 */
+		/* quickedit cda 13, 19, 31 */
+		/* lisa816 12, 22, 40 */
+		/* orca 16, 25, 41 */
+		curbp->b_tabw = 0;
+		curbp->b_tabv[0] = (1 << 12) | (1 << 18) | (1 << 30);
+		curbp->b_tabv[1] = 0;
+		curbp->b_tabv[2] = 0;
+		curbp->b_tabv[3] = 0;
+	}
 
 	/* redraw needed */
 	curwp->w_rflag |= WFFRAME;
@@ -322,6 +336,7 @@ merlin_comment_line(int f, int n)
 	return TRUE;
 }
 
+#if 0
 int
 merlin_set_tab_stops(int f, int n)
 {
@@ -368,6 +383,7 @@ merlin_set_tab_stops(int f, int n)
 	curwp->w_rflag |= WFFRAME;
 	return (TRUE);
 }
+#endif
 
 int merlin_toggle_uppercase(int f, int n) {
 
@@ -388,14 +404,17 @@ int merlin_toggle_uppercase(int f, int n) {
  *
  */
 
+
 int
 merlin_getcolpos(struct mgwin *wp)
 {
-	int *tabs = wp->w_bufp->b_tabv;
 	int i, c;
 	int st = 0;
 	int q = 0;
 	int col = 0;
+
+	int tabs[3];
+	get_tab_stops(wp->w_bufp, tabs, 3);
 
 	for (i = 0; i < wp->w_doto; ++i) {
 		c = lgetc(wp->w_dotp, i);
@@ -483,10 +502,14 @@ merlin_getcolpos(struct mgwin *wp)
 int
 merlin_getgoal(struct line *dlp)
 {
-	int *tabs = curbp->b_tabv;
 	int c, i, col = 0;
 	int st = 0;
 	int q = 0;
+
+
+	int tabs[3];
+	get_tab_stops(curbp, tabs, 3);
+
 
 	for (i = 0; i < llength(dlp); i++) {
 		c = lgetc(dlp, i);
@@ -584,8 +607,8 @@ merlin_render_line(struct line *lp, struct mgwin *wp)
 	int st = 0;
 	int q = 0;
 
-	int *tabs = wp->w_bufp->b_tabv;
-
+	int tabs[3];
+	get_tab_stops(wp->w_bufp, tabs, 3);
 
 	for (j = 0; j < llength(lp); ++j) {
 		int c = lgetc(lp, j);

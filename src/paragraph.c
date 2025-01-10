@@ -413,7 +413,11 @@ fillword(int f, int n)
 			return selfinsert(f, n);
 		c = lgetc(curwp->w_dotp, i);
 		if (c == '\t')
+#if 1
+			col = ntabstopv(col, curwp->w_bufp);
+#else
 			col = ntabstop(col, curwp->w_bufp->b_tabw);
+#endif
 		else if (ISCTRL(c) != FALSE)
 			++col;
 	}

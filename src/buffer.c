@@ -57,6 +57,52 @@ settabw(int f, int n)
 	return (TRUE);
 }
 
+
+/* set variable tab stops */
+int
+set_tab_stops(int f, int n)
+{
+	const int BITS = 8 * sizeof(unsigned);
+
+	char	buf[80], *bufp;
+	const char *errstr;
+	char *token;
+	int i;
+	unsigned tabv[4];
+
+
+	if ((bufp = eread("Tab Stops: ", buf, sizeof(buf),
+	    EFNUL | EFNEW | EFCR)) == NULL)
+		return (ABORT);
+
+	/* expect a list of numbers */
+
+	for (i = 0; i < 4; ++i)
+		tabv[i] = 0;
+
+	for (;;) {
+		token = strsep(&bufp, ",");
+		if (!token) break;
+		n = strtonum(token, 1, 4 * 8 * sizeof(unsigned), &errstr);
+		if (errstr)
+			return (dobeep_msgs("Bad tab stop", errstr));
+		--n;
+		tabv[n / BITS] |=  1 << (n % BITS);
+	}
+
+	// if (curbp->b_tabw > 0)
+		// curbp->b_tabw = -curbp->b_tabw;
+
+	curbp->b_tabw = 0;
+	for (i = 0; i < 4; ++i)
+		curbp->b_tabv[i] = tabv[i];
+
+	curwp->w_rflag |= WFFRAME;
+	return (TRUE);
+}
+
+
+
 int
 togglereadonlyall(int f, int n)
 {
@@ -634,11 +680,6 @@ bnew(const char *bname)
 	bp->b_nlseq = "\n";		/* use unix default */
 	bp->b_nlchr = bp->b_nlseq;
 	bp->b_tabw = defb_tabw;
-
-	bp->b_tabv[0] = 10;
-	bp->b_tabv[1] = 15;
-	bp->b_tabv[2] = 28;
-	bp->b_tabv[3] = 0;
 
 	if ((bp->b_bname = strdup(bname)) == NULL) {
 		dobeep();

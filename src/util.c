@@ -28,23 +28,58 @@ ntabstop(int col, int tabw)
 
 int ntabstopv(int col, struct buffer *curbp)
 {
+	const int BITS = 8 * sizeof(unsigned);
+
 	/* fixed width */
 	if (curbp->b_tabw) return ntabstop(col, curbp->b_tabw);
 
 	/* variable width */
 	col += 1;
-	int ix = col / sizeof(unsigned) * 8;
-	int pos = col % sizeof(unsigned) * 8;
-	for( ; ix < 4; ++ix, pos = 0) {
+	int ix = col / BITS;
+	int bit = col % BITS;
+
+	if (col >= BITS * 4) return col;
+
+	for( ; ix < 4; ++ix, bit = 0) {
 		unsigned tabv = curbp->b_tabv[ix];
 
-		tabv >>= pos;
-		for (; tabv; tabv >>= 1, ++pos) {
+		tabv >>= bit;
+		for (; tabv; tabv >>= 1, ++bit) {
 			if (tabv & 1)
-				return ix * sizeof(unsigned) * 8 + pos;
+				return ix * BITS + bit + 1;
 		}
 	}
 	return col;
+}
+
+/* return the first count tab stops */
+void get_tab_stops(struct buffer *curbp, int *out, int count) {
+
+	int i;
+
+	if (!count) return;
+
+	if (curbp->b_tabw) {
+		for (i = 0; i < count; ++i)
+			out[count] = i * curbp->b_tabw;
+	} else {
+		const int BITS = 8 * sizeof(unsigned);
+
+		int ix;
+		int bit;
+
+		for (ix = 0, i = 0; ix < 4; ++ix) {
+			unsigned tabv = curbp->b_tabv[ix];
+
+			for (bit = 0; tabv ; tabv >>= 1, ++bit) {
+				if (tabv & 0x01) {
+					out[i++] = ix * BITS + bit + 1;
+					if (i == count) return;
+				}
+			}
+		}
+		for( ; i < count; ++i) out[i] = 0;
+	}
 }
 
 
@@ -139,7 +174,11 @@ getcolpos(struct mgwin *wp)
 	for (i = 0; i < wp->w_doto; ++i) {
 		c = lgetc(wp->w_dotp, i);
 		if (c == '\t') {
+			#if 1
+			col = ntabstopv(col, wp->w_bufp);
+			#else
 			col = ntabstop(col, wp->w_bufp->b_tabw);
+			#endif
 		} else if (ISCTRL(c) != FALSE)
 			col += 2;
 		else if (isprint(c)) {
@@ -380,10 +419,42 @@ doindent(int cols)
 
 	if (curbp->b_flag & BFNOTAB)
 		return (linsert(cols, ' '));
+#if 1
+	int spaces = 0;
+	int tabs = 0;
+	if (curbp->b_tabw) {
+		tabs = cols / curbp->b_tabw;
+		spaces = cols % curbp->b_tabw;
+	} else {
+		/* TODO */
+		const int BITS = 8 * sizeof(unsigned);
+		int ix;
+		int ts = 0;
+		for (ix = 0; ix < 4; ++ix) {
+			unsigned tabv = curbp->b_tabv[ix];
+			int bit;
+			unsigned mask = 0;
+			for (bit = 0, mask = 1; bit < BITS; ++bit, mask <<= 1) {
+				if (tabv & mask) {
+					if (ix * BITS + bit >= cols) break;
+					ts = ix * BITS + bit + 1;
+					++tabs;
+				}
+			}
+		}
+		spaces = cols - ts;
+	}
+	if (tabs && linsert(tabs, '\t') == FALSE)
+		return (FALSE);
+	if (spaces && linsert(spaces, ' ') == FALSE)
+		return (FALSE);
+
+#else
 	if ((n = cols / curbp->b_tabw) != 0 && linsert(n, '\t') == FALSE)
 		return (FALSE);
 	if ((n = cols % curbp->b_tabw) != 0 && linsert(n, ' ') == FALSE)
 		return (FALSE);
+#endif
 	return (TRUE);
 }
 
@@ -412,7 +483,12 @@ lfindent(int f, int n)
 			if (c != ' ' && c != '\t')
 				break;
 			if (c == '\t')
+			#if 1
+				nicol = ntabstopv(nicol, curwp->w_bufp);
+			#else
 				nicol = ntabstop(nicol, curwp->w_bufp->b_tabw);
+			#endif
+
 			else
 				++nicol;
 		}
@@ -518,7 +594,11 @@ space_to_tabstop(int f, int n)
 
 	col = target = getcolpos(curwp);
 	while (n-- > 0)
+		#if 1
+		target = ntabstopv(target, curbp);
+		#else
 		target = ntabstop(target, curbp->b_tabw);
+		#endif
 	return (linsert(target - col, ' '));
 }
 

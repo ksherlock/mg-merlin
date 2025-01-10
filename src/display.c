@@ -331,7 +331,11 @@ vtputc(int c, struct mgwin *wp)
 	if (vtcol >= ncol)
 		vp->v_text[ncol - 1] = '$';
 	else if (c == '\t') {
+#if 1
+		target = ntabstopv(vtcol, wp->w_bufp);
+#else
 		target = ntabstop(vtcol, wp->w_bufp->b_tabw);
+#endif
 		do {
 			vtputc(' ', wp);
 		} while (vtcol < ncol && vtcol < target);
@@ -365,7 +369,11 @@ vtpute(int c, struct mgwin *wp)
 	if (vtcol >= ncol)
 		vp->v_text[ncol - 1] = '$';
 	else if (c == '\t') {
+#if 1
+		target = ntabstopv(vtcol + lbound, wp->w_bufp);
+#else
 		target = ntabstop(vtcol + lbound, wp->w_bufp->b_tabw);
+#endif
 		do {
 			vtpute(' ', wp);
 		} while (((vtcol + lbound) < target) && vtcol < ncol);

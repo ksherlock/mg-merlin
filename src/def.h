@@ -384,7 +384,7 @@ struct buffer {
 	int		 b_markline;	/* Line number of mark */
 	int		 b_lines;	/* Number of lines in file	*/
 
-	int		 b_tabv[4];
+	unsigned	 b_tabv[4];
 };
 #define b_bufp	b_list.l_p.x_bp
 #define b_bname b_list.l_name
@@ -521,6 +521,7 @@ int		 delwind(int, int);
 
 /* buffer.c */
 int		 settabw(int, int);
+int		 set_tab_stops(int, int);
 int		 togglereadonly(int, int);
 int		 togglereadonlyall(int, int);
 struct buffer   *bfind(const char *, int);
@@ -638,6 +639,8 @@ int		 setlineno(int);
 
 /* util.c X */
 int		 ntabstop(int, int);
+int		 ntabstopv(int, struct buffer *);
+void		 get_tab_stops(struct buffer *curbp, int *out, int count);
 int		 showcpos(int, int);
 int		 getcolpos(struct mgwin *);
 int		 twiddle(int, int);
