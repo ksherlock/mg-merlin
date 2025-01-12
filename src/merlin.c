@@ -22,9 +22,12 @@ void merlin_init(void);
 int merlin_lf(int f, int n);
 int merlin_star(int f, int n);
 int merlin_tab(int f, int n);
+int merlin_space(int f, int n);
 int merlin_toggle(int f, int n);
 int merlin_comment_line(int f, int n);
-int merlin_set_tab_stops(int f, int n);
+int merlin_left_align_insert(int f, int n);
+
+// int merlin_set_tab_stops(int f, int n);
 int merlin_toggle_uppercase(int f, int n);
 
 int merlin_getcolpos(struct mgwin *wp);
@@ -42,12 +45,12 @@ static PF merlin_pf_insert[] = {
 	selfinsert
 };
 
-static PF merlin_pf_tab[] = {
+static PF merlin_pf_space[] = {
 	merlin_tab
 };
 
-static PF merlin_pf_star[] = {
-	merlin_star
+static PF merlin_pf_left_insert[] = {
+	merlin_left_align_insert
 };
 
 static PF merlin_cx_semi[] = {
@@ -73,21 +76,21 @@ static struct KEYMAPE (1) merlin_cx_map = {
 	}
 };
 
-static struct KEYMAPE (8) merlin_map = {
-	8,
-	8,
+static struct KEYMAPE (10) merlin_map = {
+	10,
+	10,
 	rescan,
 	{
 		{ CCHR('I'), CCHR('M'), merlin_pf_cc, NULL },
 		{ CCHR('X'), CCHR('X'), merlin_pf_null, (KEYMAP *)&merlin_cx_map },
-		{ ' ', ' ', merlin_pf_tab, NULL },
-		{ '*', '*', merlin_pf_star, NULL },
-		{ ';', ';', merlin_pf_star, NULL },
-
-		/* don't match braces... */
-		{')', ')', merlin_pf_insert, NULL },
-		{']', ']', merlin_pf_insert, NULL },
-		{'}', '}', merlin_pf_insert, NULL },
+		{ ' ', ' ', merlin_pf_space, NULL },
+		{')', ')', merlin_pf_insert, NULL },		/* don't match braces */
+		{ '*', '*', merlin_pf_left_insert, NULL },	/* comment? */
+		{ ':', ':', merlin_pf_left_insert, NULL },	/* local label? */
+		{ ';', ';', merlin_pf_left_insert, NULL },	/* comment? */
+		{ ']', ']', merlin_pf_left_insert, NULL },	/* local label? */
+		// {']', ']', merlin_pf_insert, NULL },
+		{'}', '}', merlin_pf_insert, NULL },		/* don't match braces */
 	}
 };
 
@@ -190,6 +193,27 @@ merlin_lf(int f, int n)
 	return linsert(1, ' ');
 }
 
+
+/* remove leading white space and insert the character */
+int merlin_left_align_insert(int f, int n) {
+	int i;
+
+	if (n < 0)
+		return (FALSE);
+	if (n == 0)
+		return (TRUE);
+
+	// if (n & FFARG)
+		// return selfinsert(f, n);
+
+	i = 0;
+	while (i < curwp->w_doto && (lgetc(curwp->w_dotp, i) & 0x7f) <= ' ')
+		++i;
+
+	if (i > 0 && i == curwp->w_doto)
+		delleadwhite(FFRAND, 1);
+	return selfinsert(f, n);
+}
 
 /* star entered - if this is the first char in the line, delete leading whitespace */
 int
