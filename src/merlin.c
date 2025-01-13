@@ -32,7 +32,8 @@ int merlin_toggle_uppercase(int f, int n);
 
 int merlin_getcolpos(struct mgwin *wp);
 int merlin_getgoal(struct line *dlp);
-void merlin_render_line(struct line *lp, struct mgwin *wp);
+void merlin_render_line(struct line *lp, struct mgwin *wp, char *vtext, int lbound);
+
 
 static int in_whitespace(struct line *lp, int len);
 
@@ -429,6 +430,12 @@ int merlin_toggle_uppercase(int f, int n) {
  */
 
 
+#define SEMI_ZERO_ALIGN 0
+/*
+ * n.b. - mg doesn't edit properly if we try to
+ * display a leading ';' at the comments column; disable for now
+ */
+
 int
 merlin_getcolpos(struct mgwin *wp)
 {
@@ -452,7 +459,11 @@ merlin_getcolpos(struct mgwin *wp)
 					st = 2;
 					break;
 				case ';':
+					#if SEMI_ZERO_ALIGN
 					col = tabs[2] + 1;
+					#else
+					++col;
+					#endif
 					st = 7;
 					break;
 				case '*':
@@ -547,7 +558,11 @@ merlin_getgoal(struct line *dlp)
 					st = 2;
 					break;
 				case ';':
+					#if SEMI_ZERO_ALIGN
 					col = tabs[2] + 1;
+					#else
+					++col;
+					#endif
 					st = 7;
 					break;
 				case '*':
@@ -619,13 +634,22 @@ merlin_getgoal(struct line *dlp)
 }
 
 
-#define TAB_TO(x) do { vtputc(' ', wp); } while(vtcol < x) 
-
-extern void vtputc(int, struct mgwin *);
 extern int vtcol;
 
+#define vput(c) \
+ if (vtcol >= ncol) { vtext[ncol - 1] = '$'; return; } \
+ if (vtcol >= 0) vtext[vtcol] = c; \
+ ++vtcol;
+
+#define vtab(x) \
+ do { \
+   vput(' ') \
+ } while ((vtcol + lbound) < (x))
+
+
+
 void
-merlin_render_line(struct line *lp, struct mgwin *wp)
+merlin_render_line(struct line *lp, struct mgwin *wp, char *vtext, int lbound)
 {
 	int j;
 	int st = 0;
@@ -643,18 +667,20 @@ merlin_render_line(struct line *lp, struct mgwin *wp)
 		case 0:
 			switch(c) {
 			case ';':
-				TAB_TO(tabs[2]);
+				#if SEMI_ZERO_ALIGN
+				vtab(tabs[2]);
+				#endif
 			case '*':
-				vtputc(c, wp);
+				vput(c);
 				st = 7;
 				break;
 			case ' ':
-				TAB_TO(tabs[0]);
+				vtab(tabs[0]);
 				st = 2;
 				break;
 			default:
 				if (merlin_uppercase) c = toupper(c);
-				vtputc(c, wp);
+				vput(c);
 				st = 1;
 				break;
 			}
@@ -663,12 +689,12 @@ merlin_render_line(struct line *lp, struct mgwin *wp)
 
 		case 1:
 			if (c == ' ') {
-				TAB_TO(tabs[0]);
+				vtab(tabs[0]);
 				++st;
 			}
 			else {
 				if (merlin_uppercase) c = toupper(c);
-				vtputc(c, wp);
+				vput(c);
 			}
 			break;
 
@@ -676,8 +702,8 @@ merlin_render_line(struct line *lp, struct mgwin *wp)
 		case 4:
 			if (c == ' ') break;
 			if (c == ';') {
-				TAB_TO(tabs[2]);
-				vtputc(c, wp);
+				vtab(tabs[2]);
+				vput(c);
 				st = 7;
 				break;
 			}
@@ -690,18 +716,18 @@ merlin_render_line(struct line *lp, struct mgwin *wp)
 
 		case 3:
 			if (c == ' ') {
-				TAB_TO(tabs[1]);
+				vtab(tabs[1]);
 				++st;
 			}
 			else {
 				if (merlin_uppercase) c = toupper(c);
-				vtputc(c, wp);
+				vput(c);
 			}
 			break;
 
 		case 5:
 			if (c == ' ' && !q) {
-				TAB_TO(tabs[2]);
+				vtab(tabs[2]);
 				++st;
 				break;
 			}
@@ -714,7 +740,7 @@ merlin_render_line(struct line *lp, struct mgwin *wp)
 				if (c == '"' || c == '\'')
 					q = c;
 			}
-			vtputc(c, wp);
+			vput(c);
 			break;
 
 		case 6:
@@ -722,13 +748,11 @@ merlin_render_line(struct line *lp, struct mgwin *wp)
 			++st;
 
 		case 7:
-			vtputc(c, wp);
+			vput(c);
 			break;
 		}
 	}
-
 }
-
 
 
 

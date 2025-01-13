@@ -415,8 +415,8 @@ static void render_line(struct line *lp, struct mgwin *wp)
 
 #ifdef ENABLE_MERLIN
 	if (wp->w_bufp->b_flag & BFMERLIN) {
-		extern void merlin_render_line(struct line *lp, struct mgwin *wp);
-		merlin_render_line(lp, wp);
+		extern void	merlin_render_line(struct line *lp, struct mgwin *wp, char *vtext, int lbound);
+		merlin_render_line(lp, wp, vscreen[vtrow]->v_text, 0);
 		return;
 	}
 #endif
@@ -732,8 +732,19 @@ updext(int currow, int curcol)
 	 */
 	vtmove(currow, -lbound);		/* start scanning offscreen */
 	lp = curwp->w_dotp;			/* line to output */
+
+#ifdef ENABLE_MERLIN
+	if (curwp->w_bufp->b_flag & BFMERLIN) {
+		extern void	merlin_render_line(struct line *lp, struct mgwin *wp, char *vtext, int lbound);
+		merlin_render_line(lp, curwp, vscreen[currow]->v_text, lbound);
+	} else {
+		for (j = 0; j < llength(lp); ++j)	/* until the end-of-line */
+			vtpute(lgetc(lp, j), curwp);		
+	}
+#else
 	for (j = 0; j < llength(lp); ++j)	/* until the end-of-line */
 		vtpute(lgetc(lp, j), curwp);
+#endif
 	vteeol();				/* truncate the virtual line */
 	vscreen[currow]->v_text[0] = '$';	/* and put a '$' in column 1 */
 }
