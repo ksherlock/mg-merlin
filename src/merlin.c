@@ -198,11 +198,13 @@ merlin_tab(int f, int n)
 
 /*
  * Indent-and-newline (technically, newline then indent)
+ * BUT! if there's content after the point, need to handle smarter.
  */
 int
 merlin_lf(int f, int n)
 {
 	char c;
+	int doto;
 
 	if (n < 0)
 		return (FALSE);
@@ -210,8 +212,13 @@ merlin_lf(int f, int n)
 		deltrailwhite(FFRAND, 1);
 
 	c = llength(curwp->w_dotp) ? lgetc(curwp->w_dotp, 0) & 0x7f : 0;
+
+	doto = curwp->w_doto;
+
 	if (enewline(FFRAND, 1) == FALSE)
 		return (FALSE);
+
+	if (doto == 0) return TRUE; /* special case when breaking a line */
 
 	/* if the previous line was a full-line comment, continue it */
 	if (c == '*') {
