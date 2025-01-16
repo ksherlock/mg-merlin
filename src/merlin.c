@@ -335,7 +335,7 @@ merlin_comment_line(int f, int n)
 	struct line *last = NULL;
 	struct line *iter = NULL;
 	struct line *dotp = curwp->w_dotp;
-	int doto = curwp->w_doto;
+	// int doto = curwp->w_doto;
 	int dotline = curwp->w_dotline;
 
 	if (curbp->b_flag & BFREADONLY) {
@@ -359,14 +359,15 @@ merlin_comment_line(int f, int n)
 		gotobol(FFRAND, 1); 
 		if (c == '*') {
 			ok = ldelete(1, KNONE);
-			if (ok) --doto;
+			// if (ok) ++doto;
 		} else {
 			ok = linsert(1, '*');
-			if (ok) ++doto;
+			// if (ok) ++doto;
 		}
 
 		/* move back to the starting point */
-		forwchar(FFRAND, doto);
+		// forwchar(FFRAND, doto);
+		curwp->w_doto = 0;
 		return ok;
 	}
 
