@@ -27,6 +27,10 @@ int merlin_toggle(int f, int n);
 int merlin_comment_line(int f, int n);
 int merlin_left_align_insert(int f, int n);
 
+
+int merlin_gotobop(int f, int n);
+int merlin_gotoeop(int f, int n);
+
 // int merlin_set_tab_stops(int f, int n);
 int merlin_toggle_uppercase(int f, int n);
 
@@ -58,6 +62,12 @@ static PF merlin_cx_semi[] = {
 	merlin_comment_line
 };
 
+static PF merlin_esc_bracket[] = {
+	merlin_gotobop,
+	rescan,
+	merlin_gotoeop
+};
+
 static PF merlin_pf_cc[] = {
 	merlin_tab,		/* ^I */
 	enewline,		/* ^J */
@@ -77,13 +87,25 @@ static struct KEYMAPE (1) merlin_cx_map = {
 	}
 };
 
-static struct KEYMAPE (10) merlin_map = {
-	10,
-	10,
+
+static struct KEYMAPE (1) merlin_esc_map = {
+	1,
+	1,
+	rescan,
+	{
+		{ '{', '}', merlin_esc_bracket , NULL },
+	}
+};
+
+static struct KEYMAPE (11) merlin_map = {
+	11,
+	11,
 	rescan,
 	{
 		{ CCHR('I'), CCHR('M'), merlin_pf_cc, NULL },
 		{ CCHR('X'), CCHR('X'), merlin_pf_null, (KEYMAP *)&merlin_cx_map },
+		{ CCHR('['), CCHR('['), merlin_pf_null, (KEYMAP *)&merlin_esc_map },
+
 		{ ' ', ' ', merlin_pf_space, NULL },
 		{')', ')', merlin_pf_insert, NULL },		/* don't match braces */
 		{ '*', '*', merlin_pf_left_insert, NULL },	/* comment? */
@@ -100,8 +122,12 @@ merlin_init(void)
 {
 	funmap_add(merlin_toggle, "merlin", 0);
 	funmap_add(merlin_comment_line, "comment-line", 0);
-	// funmap_add(merlin_set_tab_stops, "set-tab-stops", 0);
+	funmap_add(merlin_lf, "merlin-indent-and-newline", 0);
 	funmap_add(merlin_toggle_uppercase, "merlin-uppercase", 0);
+	funmap_add(merlin_gotobop, "merlin-backward-global-label", 0);
+	funmap_add(merlin_gotoeop, "merlin-forward-global-label", 0);
+	funmap_add(merlin_left_align_insert, "merlin-electric-insert", 0);
+	funmap_add(merlin_tab, "merlin-electric-tab", 0);
 	maps_add((KEYMAP *)&merlin_map, "merlin");
 }
 
@@ -421,6 +447,72 @@ int merlin_toggle_uppercase(int f, int n) {
 	return (TRUE);
 }
 
+
+
+/*
+ * goto paragraph, but paragraphs are non-local labels
+ */
+
+static int is_global_line(struct line *lp) {
+	int c;
+	c = llength(lp) ? lgetc(lp, 0) & 0x7f: 0;
+	return (c == '_' || isalpha(c));
+}
+
+int
+merlin_gotobop(int f, int n)
+{
+	/* the other way... */
+	if (n < 0)
+		return (merlin_gotoeop(f, -n));
+
+	/* if current line is a global, we want to skip over it */
+	if (/*curwp->w_doto == 0 && */ is_global_line(curwp->w_dotp))
+		++n;
+
+
+	while (lback(curwp->w_dotp) != curbp->b_headp) {
+		curwp->w_doto = 0;
+
+		if (is_global_line(curwp->w_dotp)) {
+			if (--n <= 0) break;
+		}
+
+		curwp->w_dotline--;
+		curwp->w_dotp = lback(curwp->w_dotp);
+	}
+	/* force screen update */
+	curwp->w_rflag |= WFMOVE;
+	return (TRUE);
+}
+
+
+
+int
+merlin_gotoeop(int f, int n)
+{
+	/* the other way... */
+	if (n < 0)
+		return (merlin_gotobop(f, -n));
+
+	if ( /* curwp->w_doto == 0 && */ is_global_line(curwp->w_dotp))
+		++n;
+
+
+	while (lforw(curwp->w_dotp) != curbp->b_headp) {
+		curwp->w_doto = 0;
+
+		if (is_global_line(curwp->w_dotp)) {
+			if (--n <= 0) break;
+		}
+
+		curwp->w_dotline++;
+		curwp->w_dotp = lforw(curwp->w_dotp);
+	}
+	/* force screen update */
+	curwp->w_rflag |= WFMOVE;
+	return (TRUE);
+}
 
 
 /*
